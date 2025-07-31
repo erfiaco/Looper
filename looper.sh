@@ -1,17 +1,43 @@
 #!/bin/bash
 
-# Configura estos valores si lo deseas
-DURACION=5 # Duración en segundos
 NOMBRE_ARCHIVO="grabacion_$(date +%F_%H-%M-%S).wav"
-DISPOSITIVO="plughw:1,0" # Asegúrate que es el Zoom H4n Pro. Cambia si hace falta.
-FORMATO="cd" # CD = 44100 Hz, 16 bits, estéreo
+DISPOSITIVO="plughw:1,0"
+FORMATO="cd"
+TIEMPO_MAXIMO=10 # segundos
 
-# Mensaje informativo
-echo "🎙️ Grabando $DURACION segundos desde el Zoom H4n Pro..."
+echo "🎙️ Grabando desde el Zoom H4n Pro..."
+echo "Pulsa la barra espaciadora para detener, o espera $TIEMPO_MAXIMO segundos."
 echo "Guardando en: $NOMBRE_ARCHIVO"
 
-# Ejecutar grabación
-arecord -D "$DISPOSITIVO" -f "$FORMATO" -t wav -d "$DURACION" "$NOMBRE_ARCHIVO"
+# Iniciar grabación
+arecord -D "$DISPOSITIVO" -f "$FORMATO" -t wav "$NOMBRE_ARCHIVO" &
+PID=$!
 
-# Confirmación
-echo "✅ Grabación completada."
+# Configurar tiempo de espera
+stty -echo -icanon time 0 min 0
+INICIO=$(date +%s)
+
+while true; do
+  key=$(dd bs=1 count=1 2>/dev/null)
+  if [[ "$key" == " " ]]; then
+    echo ""
+    echo "🛑 Barra espaciadora detectada. Deteniendo grabación..."
+    kill $PID
+    wait $PID
+    break
+  fi
+
+  AHORA=$(date +%s)
+  if (( AHORA - INICIO >= TIEMPO_MAXIMO )); then
+    echo ""
+    echo "⏱️ Tiempo máximo alcanzado. Deteniendo grabación..."
+    kill $PID
+    wait $PID
+    break
+  fi
+
+  sleep 0.1
+done
+
+stty sane
+echo "✅ Grabación guardada en: $NOMBRE_ARCHIVO"
