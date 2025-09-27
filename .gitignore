@@ -4,3 +4,8 @@
 /looper_env/
 lg/
 Experimentos/
+__pyache__/
+*.pyc
+*.pyco
+*.pyd
+*.pyo
