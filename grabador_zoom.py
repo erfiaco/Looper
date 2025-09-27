@@ -62,7 +62,7 @@ def reproducir_archivo(nombre_archivo):
     
     reproduciendo = True
     while reproduciendo:
-        sd.play(data, fs, device='pulse')
+        sd.play(data, fs, device='audioinjectorpi') #pulse
         sd.wait()
 
 # ===== ACCIONES DE BOTONES =====
