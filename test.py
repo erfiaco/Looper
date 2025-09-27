@@ -10,6 +10,7 @@ from gpiozero import Button
 from threading import Event, Thread
 import LCD_I2C_classe as LCD
 lcd = LCD.LCD_I2C()
+import oled.clase
 
 # Force gpiozero to use RPi.GPIO
 os.environ["GPIOZERO_PIN_FACTORY"] = "rpigpio"
