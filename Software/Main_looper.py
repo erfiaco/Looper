@@ -9,9 +9,8 @@ from gpiozero import Button
 # force gpiozero to use RPi.GPIO
 os.environ["GPIOZERO_PIN_FACTORY"] = "rpigpio"
 
-# lcd
-import LCD_I2C_classe as LCD
-lcd = LCD.LCD_I2C()
+# oled
+import ../libs/oled_classe as oled
 
 # backend selector (for now only sd; later you can add alsa)
 def load_backend(name: str):
@@ -35,19 +34,18 @@ def show_state(io):
     print("=== LOOPER RPI ===")
     print(f"Mute: {'ON' if state['mute'] else 'OFF'}")
     if state["recording"]:
-        est = "Grabando"
+        est = "REC"
     elif state["playing"]:
-        est = "Reproduciendo"
+        est = "PLAY"
     else:
-        est = "En espera"
+        est = "WAITING"
     print(f"Estado: {est}")
     if state["last_file"]:
         print(f"Ultimo loop: {os.path.basename(state['last_file'])}")
     print("Mantener STOP 3s para salir")
 
-    # lcd lines (ascii-safe)
-    lcd.write(f"Estado: {est}", 1)
-    lcd.write(f"Mute: {'ON' if state['mute'] else 'OFF'}", 2)
+    # oled lines (ascii-safe)
+    oled.draw_status(est, f"Mute: {'ON' if state['mute'] else 'OFF'}")
 
 def main():
     parser = argparse.ArgumentParser(description="Looper with backend selector")
@@ -79,7 +77,6 @@ def main():
         device_in=args.device_in,
         device_out=args.device_out,
         loops_dir=args.loops_dir,
-        lcd=lcd,
     )
 
     # buttons
@@ -105,7 +102,7 @@ def main():
 
     def on_mute():
         io.toggle_mute()
-        lcd.write("Mute ON" if io.get_state()["mute"] else "Mute OFF", 2)
+        oled.draw_status("Mute ON" if io.get_state()["mute"] else "Mute OFF","")
         show_state(io)
 
     def on_play():
@@ -181,7 +178,6 @@ def main():
         # if there is buffered audio, save it
         if io.has_buffer():
             io.save_recording()
-        lcd.clear()
         print("Program finished cleanly")
 
 if __name__ == "__main__":
