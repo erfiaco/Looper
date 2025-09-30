@@ -96,7 +96,7 @@ def reproducir_en_bucle():
         if not reproduciendo or exit_event.is_set():
             sd.stop()
     
-    print("Reproducción terminada")
+    print("Reproduccion terminada")
     reproduciendo = False
 
 def guardar_grabacion():
@@ -125,7 +125,7 @@ def monitorear_salida():
         time.sleep(0.1)
 
 def handler_senal(signum, frame):
-    print("\nSeñal de interrupción recibida...")
+    print("\nSenal de interrupcion recibida...")
     exit_event.set()
 
 # ===== ACCIONES DE BOTONES =====
@@ -180,10 +180,10 @@ def detener_reproduccion():
         reproduciendo = False
         #sd.stop()
         #playback_thread = None
-        print("\nReproducción detenida")
+        print("\nReproduccion detenida")
     if grabando:
         grabando = False
-        print("\nGrabación detenida por STOP")
+        print("\nGrabacion detenida por STOP")
         guardar_grabacion()
     mostrar_estado()
 

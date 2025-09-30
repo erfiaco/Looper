@@ -4,7 +4,7 @@ import numpy as np
 import threading
 import time
 
-# ===== NUEVA IMPLEMENTACIÓN PARA LOOPER =====
+# ===== NUEVA IMPLEMENTACIoN PARA LOOPER =====
 class Looper:
     def __init__(self):
         self.audio_data = None
@@ -28,7 +28,7 @@ class Looper:
             return False
     
     def audio_callback(self, outdata, frames, time_info, status):
-        """Callback para reproducción continua en tiempo real"""
+        """Callback para reproduccion continua en tiempo real"""
         if status:
             print(status)
         
@@ -50,14 +50,14 @@ class Looper:
                 self.current_position = remaining
     
     def start_loop(self):
-        """Iniciar reproducción en bucle"""
+        """Iniciar reproduccion en bucle"""
         if self.audio_data is None:
             print("No hay audio cargado")
             return False
         
         with self.lock:
             if self.is_playing:
-                return True  # Ya está reproduciendo
+                return True  # Ya esta reproduciendo
             
             self.is_playing = True
             self.current_position = 0
@@ -68,7 +68,7 @@ class Looper:
                     samplerate=self.sample_rate,
                     channels=self.audio_data.shape[1] if len(self.audio_data.shape) > 1 else 1,
                     callback=self.audio_callback,
-                    blocksize=256,  # Bloque pequeño para baja latencia
+                    blocksize=256,  # Bloque pequeno para baja latencia
                     dtype='float32'
                 )
                 self.stream.start()
@@ -80,7 +80,7 @@ class Looper:
                 return False
     
     def stop_loop(self):
-        """Detener reproducción"""
+        """Detener reproduccion"""
         with self.lock:
             if self.stream:
                 self.stream.stop()
@@ -94,7 +94,7 @@ looper = Looper()
 
 # ===== MODIFICAR LAS FUNCIONES EXISTENTES =====
 def reproducir_en_bucle():
-    """Función simplificada para el hilo"""
+    """Funcion simplificada para el hilo"""
     if looper.start_loop():
         # Mantener el hilo vivo mientras se reproduce
         while looper.is_playing and not exit_event.is_set():
@@ -110,22 +110,22 @@ def manejar_play():
         archivo = guardar_grabacion()
         if archivo:
             if looper.load_audio(archivo):
-                print("\nGrabación detenida, iniciando reproducción en bucle...")
+                print("\nGrabacion detenida, iniciando reproduccion en bucle...")
                 reproduciendo = True
                 Thread(target=reproducir_en_bucle, daemon=True).start()
     elif ultimo_archivo:
-        print("DEBUG: Caso 2 - Hay último archivo")
+        print("DEBUG: Caso 2 - Hay ultimo archivo")
         if reproduciendo:
-            print("DEBUG: Ya está reproduciendo, deteniendo...")
+            print("DEBUG: Ya esta reproduciendo, deteniendo...")
             detener_reproduccion()
         else:
-            print("DEBUG: Iniciando reproducción desde último archivo")
+            print("DEBUG: Iniciando reproduccion desde ultimo archivo")
             if looper.load_audio(ultimo_archivo):
-                print("\nIniciando reproducción en bucle...")
+                print("\nIniciando reproduccion en bucle...")
                 reproduciendo = True
                 Thread(target=reproducir_en_bucle, daemon=True).start()
     else:
-        print("\nNo hay grabación para reproducir")
+        print("\nNo hay grabacion para reproducir")
     mostrar_estado()
 
 def detener_reproduccion():
@@ -134,6 +134,6 @@ def detener_reproduccion():
     if reproduciendo:
         looper.stop_loop()
         reproduciendo = False
-        print("\nReproducción detenida")
+        print("\nReproduccion detenida")
         mostrar_estado()
-    print(f"DEBUG: detener_reproduccion() - reproduciendo después: {reproduciendo}")
+    print(f"DEBUG: detener_reproduccion() - reproduciendo despues: {reproduciendo}")
