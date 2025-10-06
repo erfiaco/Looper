@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-#ejecuta desde looper: python3 -m software.main así lo trara como un paquete
+#ejecuta desde looper: python3 -m software.main asi lo trara como un paquete
 
 from libs import paths
 from libs import oled_lsclase
@@ -15,12 +15,12 @@ def main():
 
     # Ejemplo de uso
     grabador.grabar()
-    # ... simula grabación
+    # ... simula grabacion
     clip = grabador.detener_grabacion()
     reproductor.agregar_clip(clip)
     reproductor.reproducir()
 
-    print(clip.info())  # Usa el método de AudioFile
+    print(clip.info())  # Usa el metodo de AudioFile
 
 if __name__ == "__main__":
     main()
