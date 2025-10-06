@@ -1,223 +1,184 @@
-import sounddevice as sd
-import soundfile as sf
-import numpy as np
-import scipy.io.wavfile as wav
-import datetime
-import time
+#!/usr/bin/env python3
 import os
 import signal
-from gpiozero import Button
+import argparse
+import time
 from threading import Event, Thread
-import LCD_I2C_classe as LCD
-lcd = LCD.LCD_I2C()
-import oled.clase as oled
+from gpiozero import Button
 
-# Force gpiozero to use RPi.GPIO
+# force gpiozero to use RPi.GPIO
 os.environ["GPIOZERO_PIN_FACTORY"] = "rpigpio"
 
-# ===== CONFIGURACION =====
-CHUNK=2048
-sample_rate = 44100
-channels = 1
-mute = False
-grabando = False
-reproduciendo = False
-ultimo_archivo = None
-buffer = []
-LOOPS_DIR = "loops"
-exit_event = Event()
+# oled
+import ../libs/oled_classe as oled
 
+# backend selector (for now only sd; later you can add alsa)
+def load_backend(name: str):
+    if name == "sd":
+        from backends import sd_io as io
+        return io
+    raise ValueError(f"Unknown backend: {name}")
 
-# Crear carpeta loops si no existe
-if not os.path.exists(LOOPS_DIR):
-    os.makedirs(LOOPS_DIR)
+# pins
+PIN_REC  = 26   # start/stop record
+PIN_MUTE = 6    # toggle mute
+PIN_PLAY = 13   # play/stop loop
+PIN_STOP = 19   # short: stop all, long(3s): exit
 
-# ===== BOTONES =====
-btn_grabar = Button(26)   # Iniciar/detener grabacion
-btn_mute = Button(6)      # Silenciar/desmutear
-btn_play = Button(13)     # Reproducir en bucle (siempre)
-btn_stop = Button(19)     # Detener reproducclir (3 segundos)
-
-# ===== FUNCIONES =====
 def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system("cls" if os.name == "nt" else "clear")
 
-def mostrar_estado():
+def show_state(io):
     clear_screen()
-    print("=== LOOPER RASPBERRY ===")
-    print(f"Mute: {'ON' if mute else 'OFF'}")
-    print(f"Estado: {'Grabando' if grabando else 'Reproduciendo' if reproduciendo else 'En espera'}")
-    if ultimo_archivo:
-        print(f"timo loop: {os.path.basename(ultimo_archivo)}")
-    print("Esperando acci")
-    print("MantOP 3 segundos para salir")
-    lcd.write(f"Estado: {'Grabando' if grabando else 'Reproduciendo' if reproduciendo else 'En espera'}",1)
-    lcd.write(f"Mute: {'ON' if mute else 'OFF'}",2)
-
-
-def callback_grabacion(indata, frames, time_info, status):
-    global mute
-    if status:
-        print(status)
-    if mute:
-        indata = np.zeros_like(indata)
-    if grabando and not exit_event.is_set():
-        buffer.append(indata.copy())
-
-def reproducir_en_bucle():
-    global reproduciendo
-    if not ultimo_archivo or not os.path.exists(ultimo_archivo):
-        print(f"\nNo hay archivo para reproducir. ultimo_archivo: {ultimo_archivo}")
-        return
-    
-    print(f"\nReproduciendo {os.path.basename(ultimo_archivo)} en bucle infinito...")
-    data, fs = sf.read(ultimo_archivo, dtype='float32')
-    
-    reproduciendo = True
-    loop_count = 0
-    
-    while reproduciendo and not exit_event.is_set():
-                
-        # Iniciar reproducci
-        sd.play(data, fs, device='pulse')
-        
-        # ESPERA ACTIVA - Reemplaza sd.wait() para evitar bloqueo
-        # duration = len(data) / fs  # Duraciegundos
-        # start_time = time.time()
-        #sd.wait sustituye a start ti,e.... etc
-        sd.wait()
-        
-        # Verificar perimente si debemos detenernos
-        #while (time.time() - start_time < duration and 
-        #reproduciendo and not exit_event.is_set()):
-        #time.sleep(0.01)  # Pequesa de 10ms para ser responsivo
-        
-        # Limpiar por si acaso
-        if not reproduciendo or exit_event.is_set():
-            sd.stop()
-    
-    print("Reproduccion terminada")
-    reproduciendo = False
-
-def guardar_grabacion():
-    global buffer, ultimo_archivo
-    if buffer:
-        audio = np.concatenate(buffer)
-        nombre_archivo = os.path.join(LOOPS_DIR, f"loop_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.wav")
-        wav.write(nombre_archivo, sample_rate, audio)
-        ultimo_archivo = nombre_archivo
-        print(f"\nLoop guardado: {os.path.basename(nombre_archivo)}")
-        buffer = []
-        return nombre_archivo
-    return None
-
-# ===== MANEJO DE SALIDA =====
-def monitorear_salida():
-    while not exit_event.is_set():
-        if btn_stop.is_pressed:
-            tiempo_inicio = time.time()
-            while btn_stop.is_pressed and not exit_event.is_set():
-                if time.time() - tiempo_inicio >= 3:
-                    print("\nSolicitud de salida detectada...")
-                    exit_event.set()
-                    return
-                time.sleep(0.1)
-        time.sleep(0.1)
-
-def handler_senal(signum, frame):
-    print("\nSenal de interrupcion recibida...")
-    exit_event.set()
-
-# ===== ACCIONES DE BOTONES =====
-def iniciar_detener_grabacion():
-    global grabando, buffer, reproduciendo
-    if reproduciendo:
-        detener_reproduccion()
-    
-    if not exit_event.is_set():
-        if not grabando:
-            buffer = []
-            grabando = True
-            print("\nIniciando grabaci")
-        else:
-            print("heeey")
-            #grabando = False
-            #print("\nDeteniendo grabaci")
-            #guardar_grabacion()
-        mostrar_estado()
-
-def alternar_mute():
-    global mute
-    mute = not mute
-    lcd.write("Mute ON" if mute else "Mute OFF",2)
-
-def manejar_play():
-    global grabando, reproduciendo
-    if grabando:
-        # Si estando, detener grabacicomenzar bucle
-        grabando = False
-        archivo = guardar_grabacion()
-        if archivo:
-            print("\nGrabacitenida, iniciando reproducc bucle...")
-            reproduciendo = True
-            Thread(target=reproducir_en_bucle, daemon=False).start()
-    elif ultimo_archivo:
-        if reproduciendo:
-            # Si ya estoduciendo, detener
-            detener_reproduccion()
-        else:
-            # Si no estoduciendo, iniciar bucle
-            print("\nIniciando reproducci bucle...")
-            reproduciendo = True
-            Thread(target=reproducir_en_bucle, daemon=False).start()
+    state = io.get_state()
+    print("=== LOOPER RPI ===")
+    print(f"Mute: {'ON' if state['mute'] else 'OFF'}")
+    if state["recording"]:
+        est = "REC"
+    elif state["playing"]:
+        est = "PLAY"
     else:
-        print("\nNo hay grabacra reproducir")
-    mostrar_estado()
+        est = "WAITING"
+    print(f"Estado: {est}")
+    if state["last_file"]:
+        print(f"Ultimo loop: {os.path.basename(state['last_file'])}")
+    print("Mantener STOP 3s para salir")
 
-def detener_reproduccion():
-    global reproduciendo, grabando#, playback_thread
-    if reproduciendo:
-        reproduciendo = False
-        #sd.stop()
-        #playback_thread = None
-        print("\nReproduccion detenida")
-    if grabando:
-        grabando = False
-        print("\nGrabacion detenida por STOP")
-        guardar_grabacion()
-    mostrar_estado()
+    # oled lines (ascii-safe)
+    oled.draw_status(est, f"Mute: {'ON' if state['mute'] else 'OFF'}")
 
-# Configurar manejadores de se
-signal.signal(signal.SIGINT, handler_senal)
-signal.signal(signal.SIGTERM, handler_senal)
+def main():
+    parser = argparse.ArgumentParser(description="Looper with backend selector")
+    parser.add_argument("--backend", choices=["sd"], default="sd")
+    parser.add_argument("--sr", type=int, default=44100)
+    parser.add_argument("--ch", type=int, default=1)
+    parser.add_argument("--blocksize", type=int, default=1024)
+    parser.add_argument("--device_out", type=str, default=None)  # e.g. "pulse" or "audioinjectorpi"
+    parser.add_argument("--device_in", type=str, default=None)
+    parser.add_argument("--loops_dir", type=str, default="loops")
+    args = parser.parse_args()
 
-# Asignar funciones a botones
-btn_grabar.when_pressed = iniciar_detener_grabacion
-btn_mute.when_pressed = alternar_mute
-btn_play.when_pressed = manejar_play
-btn_stop.when_pressed = detener_reproduccion
+    io = load_backend(args.backend)
 
-# ===== PROGRAMA PRINCIPAL =====
-mostrar_estado()
+    exit_event = Event()
 
-# Iniciar hilos
-Thread(target=monitorear_salida, daemon=False).start()
+    # signal handlers
+    def handle_signal(signum, frame):
+        print("\nSignal received, exiting cleanly...")
+        exit_event.set()
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
 
-try:
-    with sd.InputStream(samplerate=sample_rate, channels=channels, 
-                       callback=callback_grabacion, blocksize=1024):
+    # init backend
+    io.init_backend(
+        samplerate=args.sr,
+        channels=args.ch,
+        blocksize=args.blocksize,
+        device_in=args.device_in,
+        device_out=args.device_out,
+        loops_dir=args.loops_dir,
+    )
+
+    # buttons
+    btn_rec  = Button(PIN_REC)
+    btn_mute = Button(PIN_MUTE)
+    btn_play = Button(PIN_PLAY)
+    btn_stop = Button(PIN_STOP)
+
+    # button actions
+    def on_rec():
+        # toggle record; if currently playing, stop playback first
+        if io.is_playing():
+            io.stop_playback()
+        if not io.is_recording():
+            io.start_recording()
+            print("\nRecording started")
+        else:
+            # do not save here; play button will save+start loop,
+            # or stop button will save and stop.
+            io.stop_recording()
+            print("\nRecording stopped")
+        show_state(io)
+
+    def on_mute():
+        io.toggle_mute()
+        oled.draw_status("Mute ON" if io.get_state()["mute"] else "Mute OFF","")
+        show_state(io)
+
+    def on_play():
+        # if recording, stop and save then start loop
+        if io.is_recording():
+            io.stop_recording()
+            path = io.save_recording()
+            if path:
+                print("\nRecord saved, starting loop...")
+                io.start_loop_playback()
+        else:
+            # toggle playback
+            if io.is_playing():
+                io.stop_playback()
+                print("\nPlayback stopped")
+            else:
+                ok = io.start_loop_playback()
+                if not ok:
+                    print("\nNo file to play")
+        show_state(io)
+
+    def on_stop():
+        # short press: stop playback and recording, save if buffer
+        # long press handling is in a monitor thread below
+        if io.is_playing():
+            io.stop_playback()
+            print("\nPlayback stopped by STOP")
+        if io.is_recording():
+            io.stop_recording()
+            saved = io.save_recording()
+            if saved:
+                print("\nRecording stopped and saved by STOP")
+        show_state(io)
+
+    btn_rec.when_pressed  = on_rec
+    btn_mute.when_pressed = on_mute
+    btn_play.when_pressed = on_play
+    btn_stop.when_pressed = on_stop
+
+    # long-press STOP (3s) to exit
+    def monitor_exit():
         while not exit_event.is_set():
-            time.sleep(0.1)
-                
-except Exception as e:
-    print(f"Error: {str(e)}")
-finally:
-    print("\nLimpiando recursos...")
-    lcd.clear()
-    grabando = False
-    reproduciendo = False
-    sd.stop()
-    if buffer:
-        guardar_grabacion()
-    print("Programa terminado correctamente")
-    os._exit(0)
+            if btn_stop.is_pressed:
+                t0 = time.time()
+                while btn_stop.is_pressed and not exit_event.is_set():
+                    if time.time() - t0 >= 3.0:
+                        print("\nExit requested by long STOP...")
+                        exit_event.set()
+                        return
+                    time.sleep(0.05)
+            time.sleep(0.05)
+
+    Thread(target=monitor_exit, daemon=True).start()
+
+    # start audio input stream (callback lives in backend)
+    show_state(io)
+    try:
+        with io.input_stream():
+            while not exit_event.is_set():
+                time.sleep(0.1)
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        print("\nCleaning up...")
+        try:
+            io.stop_playback()
+        except Exception:
+            pass
+        try:
+            io.stop_recording()
+        except Exception:
+            pass
+        # if there is buffered audio, save it
+        if io.has_buffer():
+            io.save_recording()
+        print("Program finished cleanly")
+
+if __name__ == "__main__":
+    main()
