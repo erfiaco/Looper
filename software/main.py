@@ -3,7 +3,7 @@
 #ejecuta desde looper: python3 -m software.main asi lo trara como un paquete
 
 from libs import paths
-from libs import oled_lsclase
+from libs import oled_clase
 
 from audio import AudioFile
 from grabacion import LooperGrabacion
