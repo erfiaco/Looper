@@ -1,4 +1,5 @@
 import os
+from . import paths
 
 class AudioFile:
         #atributos de clase para default
@@ -11,6 +12,7 @@ class AudioFile:
 
         def __init__(self, ruta_archivo):
             #copia a instancia si necesitas
+            self.path = LOOPS_DIR
             self.sample_rate = self.sample_rate
             
             self.ubicacion = ruta_archivo
