@@ -1,12 +1,9 @@
 import os
 
-# raiz del proyecto (un nivel arriba de /libs)
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+LOOPS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "loops")
 
-# carpetas utiles
-LIBS_DIR = os.path.join(BASE_DIR, "libs")
-SOFTWARE_DIR = os.path.join(BASE_DIR, "Software")
-LOOPS_DIR = os.path.join(BASE_DIR, "loops")
-
-# asegurate de que loops exista
-os.makedirs(LOOPS_DIR, exist_ok=True)
+def get_loop_path(nombre):
+    """Genera path completo para un loop."""
+    if not os.path.exists(LOOPS_DIR):
+        os.makedirs(LOOPS_DIR)
+    return os.path.join(LOOPS_DIR, nombre)
