@@ -27,7 +27,7 @@ difference(){
             T_BiselZ
         );
 //Largo/2
-    translate([T_Largo/2,3+0.5*T_Grosor,T_Alto/3])
+    /*translate([T_Largo/2,3+0.5*T_Grosor,T_Alto/3])
     rotate([0,-90,0])
     color("red")soporte_raspi();
 
@@ -76,7 +76,7 @@ difference(){
     translate([3+T_Largo/2,T_Ancho*0.94 + 3+0.5*T_Grosor,T_Alto*0.1])
     rotate([0,-90,0])
     color("blue")soporte_raspi();
-
+    */
         
 
     }

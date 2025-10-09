@@ -8,7 +8,7 @@ include <lib/Medidas.scad>;
 translate([0,0,0])
 color("purple")cube([Largo, Ancho, Grosor], center=false);
 
-translate([200-85-15,10,Grosor])
+translate([Largo-80,10,Grosor])
 //rotate([0,-180,-90])
 
 soportes_raspi();

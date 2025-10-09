@@ -66,11 +66,11 @@ include <Medidas.scad>;
     
     translate([r_dist_tornillo, r_dist_tornillo, 0])
     soporte_raspi();
-    translate([r_largo-r_dist_tornillo, r_ancho-r_dist_tornillo, 0])
+    translate([r_dist_larg_center_tornillo+r_dist_tornillo, r_dist_anch_center_tornillo+r_dist_tornillo, 0])
     soporte_raspi();
-    translate([r_largo-r_dist_tornillo, r_dist_tornillo, 0])
+    translate([r_dist_larg_center_tornillo+r_dist_tornillo, r_dist_tornillo, 0])
     soporte_raspi();
-    translate([r_dist_tornillo, r_ancho - r_dist_tornillo, 0])
+    translate([r_dist_tornillo, r_dist_anch_center_tornillo+r_dist_tornillo, 0])
     soporte_raspi();
 
 }
@@ -337,7 +337,17 @@ module tapa(
 
         translate([0,T_Alto*1.3,T_Largo*(7/8)])
         rotate([0,-90,atan(T_BiselZ/T_BiselY)+90])
-        color("red")cylinder(h=50,d=16, $fn=200);  
+        color("red")cylinder(h=50,d=16, $fn=200);
+      
+            //pequenos Botones selectores ó volumen
+            
+        translate([T_Ancho*0.5,T_Alto-2,(6.5/9)*T_Largo]) 
+        rotate([0,90,90])
+        cube(6);
+
+        translate([T_Ancho*0.5,T_Alto-2,(7.5/9)*T_Largo]) 
+        rotate([0,90,90])
+        cube(6);
             
         
     }

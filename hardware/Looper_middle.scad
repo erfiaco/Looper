@@ -23,7 +23,7 @@ difference()
     
     rectangulo_vacio(Ancho,Largo,Alto,Grosor);
     
-    translate([Largo-6, Ancho-(Ancho/3),0])
-    cube([12,12,6]);
+    translate([Largo-6, Ancho-(Ancho/3),4])
+    cube([10,12,6]);
 }
 
