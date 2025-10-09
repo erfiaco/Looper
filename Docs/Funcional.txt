@@ -1,0 +1,13 @@
+Clases específicas y responsabilidades:
+
+AudioClip (en audio_clip.py): Representa un loop grabado. Estado: datos de audio (numpy), nombre, path, duración. Métodos: guardar, cargar, info(). Separa I/O de audio.
+
+LooperGrabacion (en grabacion.py): Maneja el InputStream de sounddevice, buffer, mute. Callback para chunks. Métodos: start/stop, toggle_mute. Usa Event para parar sin bloqueo.
+
+LooperReproduccion (en reproduccion.py): Maneja play en bucle con sounddevice (usa Thread para no bloquear). Métodos: start_loop/stop. Integra con AudioClip.
+
+ButtonsManager (en buttons_manager.py): Configura GPIO botones y asigna callbacks (funciones que llaman métodos de otras clases). Responsabilidad: solo detección de presses (con hold para stop).
+
+LcdDisplay (en lcd_display.py): Wrapper simple para tu LCD_I2C_classe. Métodos: clear, write_line, mostrar_estado (con mute/grabando/reproduciendo).
+
+MainLooper (en main.py): Clase principal que compone todo (crea instancias, hilos, maneja signals/exit). No globals —todo por inyección.

@@ -1,5 +1,5 @@
 import time
-from software.grabacion import LooperGrabacion
+from software.grabacion import LooperGrabacion  # Absoluto para -m
 from software.reproduccion import LooperReproduccion
 from software.audio_clip import AudioClip
 from threading import Event
@@ -15,14 +15,14 @@ def main():
     ultimo_clip = None
 
     print("=== TEST LOOPER ===")
-    print("Comandos: g=grabar (toggle), p=play (toggle), m=mute (toggle), q=salir")
+    print("Comandos: g=grabar (toggle), p=reproducir inmediatamente (detiene grab si va), m=mute, q=salir")
     print("Presiona Enter después de cada comando...")
 
     grabando = False
     reproduciendo = False
 
     try:
-        # Inicia stream de grabación (siempre listening, como en tu original)
+        # Inicia stream de grabación (siempre listening)
         grabacion.start()  # Empieza el InputStream; callback corre
 
         while not exit_event.is_set():
@@ -31,6 +31,7 @@ def main():
                 exit_event.set()
                 break
             elif comando == 'g':
+                # Toggle grabación simple (como botón grabar)
                 if grabando:
                     ultimo_clip = grabacion.stop()
                     if ultimo_clip:
@@ -41,7 +42,18 @@ def main():
                     grabacion.start()
                     grabando = True
             elif comando == 'p':
-                if reproduciendo:
+                # ← FIX: Reproduce inmediatamente (detiene grab si va, como en main)
+                if grabando:
+                    ultimo_clip = grabacion.stop()
+                    if ultimo_clip:
+                        print("Grabación detenida, reproduciendo inmediatamente...")
+                        reproduccion.set_clip(ultimo_clip)
+                        reproduccion.start_loop()
+                        reproduciendo = True
+                        grabando = False
+                    else:
+                        print("No se grabó nada.")
+                elif reproduciendo:
                     reproduccion.stop()
                     reproduciendo = False
                 else:
@@ -55,7 +67,7 @@ def main():
             else:
                 print("Comando inválido. Usa g, p, m o q.")
 
-            time.sleep(0.1)  # Pequeña pausa para no spamear
+            time.sleep(0.1)  # Pequeña pausa
 
     except KeyboardInterrupt:
         pass
@@ -67,7 +79,8 @@ def main():
             reproduccion.stop()
         if ultimo_clip:
             print(f"Clip final: {ultimo_clip.info()}")
-        grabacion.stream.close() if grabacion.stream else None
+        if grabacion.stream:
+            grabacion.stream.close()
         print("¡Test terminado!")
 
 if __name__ == "__main__":
