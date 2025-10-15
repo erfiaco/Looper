@@ -25,8 +25,8 @@ class ButtonsManager:
 
         
         # Long-press STOP (3s) to exit - ¡SIN bucle manual!
-        btn_stop.hold_time = 3.0
-        btn_stop.when_held = lambda: exit_event.set()
+        self.btn_stop.hold_time = 3.0
+        self.btn_stop.when_held = lambda: exit_event.set()
 
 #    def check_long_press(self):
 #        """Chequea hold en stop (llama desde main loop)."""
