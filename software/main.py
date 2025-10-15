@@ -18,7 +18,8 @@ class MainLooper:
             self._on_grabar_press,
             self._on_mute_press,
             self._on_play_press,
-            self._on_stop_press
+            self._on_stop_press, 
+            self._on_longstop_press
         )
         self.ultimo_clip = None
         self.monitor_thread = None
@@ -42,7 +43,21 @@ class MainLooper:
                 self.grabacion.mute, self.ultimo_clip
             )
 
-     def _on_grabar_press(self):
+    def _on_longstop_press(self):
+        if self.reproduccion.reproduciendo:
+            self.reproduccion.stop()
+            print("longpressed stop")
+
+        if self.grabacion.grabando:
+            self.grabacion.stop()
+            print("Deb. long prrds stop")
+
+        else 
+            return: self.exitevent.set()
+            print("apagando dispositivo")
+            time.sleep(2)
+    
+    def _on_grabar_press(self):
         """Callback botón grabar."""
         if self.reproduccion.reproduciendo:
             self.reproduccion.stop()
@@ -79,6 +94,8 @@ class MainLooper:
 
     def _handler_senal(self, signum, frame):
         self.exit_event.set()
+
+
 
     def _monitorear_salida(self):
         """Hilo para chequeo de long press en stop (3s)."""
