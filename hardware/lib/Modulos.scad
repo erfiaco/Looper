@@ -263,6 +263,7 @@ module tapa(
         
             }
     
+/*
                 //Ponemos el fondo
                     translate([T_Ancho-T_Grosor,0,0])
                     cube([T_Grosor, T_Alto, T_Largo]);
@@ -273,7 +274,7 @@ module tapa(
                         perfil_exterior(T_Ancho,T_Alto,T_BiselY,T_BiselZ);
 
  
- 
+ */
 
     
         }
