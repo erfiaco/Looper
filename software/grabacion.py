@@ -1,7 +1,7 @@
 import sounddevice as sd
 import numpy as np
 from threading import Event
-from software.audio_clip import AudioClip
+from .audio_clip import AudioClip
 
 class LooperGrabacion:
     def __init__(self, on_state_change=None):

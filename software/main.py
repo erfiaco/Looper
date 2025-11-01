@@ -1,12 +1,20 @@
+#!/usr/bin/env python3
+
+#ejecuta desde looper: python3 -m software.main asi lo trata como un paquete
+
+#from libs import paths
+
 import signal
 import time
 import os
 from threading import Event, Thread
-from grabacion import LooperGrabacion
-from reproduccion import LooperReproduccion
-from buttons_manager import ButtonsManager
-from oled_display import OledDisplay  # ← Cambio: nuevo import
-from audio_clip import AudioClip
+from .grabacion import LooperGrabacion
+from .reproduccion import LooperReproduccion
+from .buttons_manager import ButtonsManager
+from .oled_display import OledDisplay  # ← Cambio: nuevo import
+from .audio_clip import AudioClip
+
+
 
 class MainLooper:
     def __init__(self):
@@ -18,10 +26,11 @@ class MainLooper:
             self._on_grabar_press,
             self._on_mute_press,
             self._on_play_press,
-            self._on_stop_press
+            self._on_stop_press,
+            self._on_long_stop
         )
         self.ultimo_clip = None
-        self.monitor_thread = None
+        #self.monitor_thread = None
 
         # Signals
         signal.signal(signal.SIGINT, self._handler_senal)
@@ -42,7 +51,7 @@ class MainLooper:
                 self.grabacion.mute, self.ultimo_clip
             )
 
-     def _on_grabar_press(self):
+    def _on_grabar_press(self):
         """Callback botón grabar."""
         if self.reproduccion.reproduciendo:
             self.reproduccion.stop()
@@ -77,6 +86,11 @@ class MainLooper:
             self.ultimo_clip = self.grabacion.stop()
         # Para long press: usa un timer en un hilo si quieres, pero por ahora short
 
+    def _on_long_stop(self):
+        """Callback para long press en stop (exit)."""
+        self.exit_event.set()  # O lo que necesites
+        
+
     def _handler_senal(self, signum, frame):
         self.exit_event.set()
 
@@ -98,7 +112,7 @@ class MainLooper:
             self.grabacion.mute, self.ultimo_clip
         )
         self.monitor_thread = Thread(target=self._monitorear_salida, daemon=False)
-        self.monitor_thread.start()
+        #self.monitor_thread.start()
 
         try:
             # Inicia el stream de grabación (siempre listening)
@@ -115,7 +129,7 @@ class MainLooper:
             print(f"Error: {e}")
         finally:
             self.cleanup()
-
+        
     def cleanup(self):
         print("Limpiando...")
         self.display.clear()  # ← Limpia OLED al final
