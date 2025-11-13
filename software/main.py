@@ -13,7 +13,7 @@ from .reproduccion import LooperReproduccion
 from .buttons_manager import ButtonsManager
 from .oled_display import OledDisplay  # ← Cambio: nuevo import
 from .audio_clip import AudioClip
-
+print("debugger1")
 
 
 class MainLooper:
@@ -115,12 +115,12 @@ class MainLooper:
         #self.monitor_thread.start()
 
         try:
-            # Inicia el stream de grabación (siempre listening)
+            # Inicia el stream de grabacion siempre listening)
             with self.grabacion.stream:  # Asume que en LooperGrabacion agregas self.stream en init/start
                 while not self.exit_event.is_set():
                     time.sleep(0.1)
                     # Actualiza display cada 0.5s o en callbacks
-                    if time.time() % 0.5 < 0.1:  # Opcional: refresh periódico
+                    if time.time() % 0.5 < 0.1:  # Opcional: refresh periodico
                         self.display.mostrar_estado(
                             self.grabacion.grabando, self.reproduccion.reproduciendo,
                             self.grabacion.mute, self.ultimo_clip
