@@ -1,88 +1,71 @@
 import sounddevice as sd
-import numpy as np  # ← ¡Agregado! Para astype(float32)
-from threading import Thread, Event
+import numpy as np
+from threading import Thread
 from software.audio_clip import AudioClip
+from libs import paths
 import os
-from libs import paths  # Para LOOPS_DIR
 
 class LooperReproduccion:
-    def __init__(self, ultimo_clip=None, on_state_change=None):
-        self.ultimo_clip = ultimo_clip
+    def __init__(self, on_state_change=None):
+        self.ultimo_clip = None
         self.reproduciendo = False
-        self.stop_event = Event()
+        self.stop_event = None
         self.playback_thread = None
         self.on_state_change = on_state_change
-
-        # ← NUEVO: Carga el último archivo existente si no se pasa uno
-        if not self.ultimo_clip:
-            self._cargar_ultimo_archivo()
+        self._cargar_ultimo_archivo()
 
     def _cargar_ultimo_archivo(self):
-        """Carga el archivo .wav más reciente de LOOPS_DIR."""
-        loop_dir = paths.LOOPS_DIR
-        print(f"[DEBUG] Buscando en: {loop_dir}")  # ← NUEVO: ve el path
-        if os.path.exists(loop_dir):
-            wav_files = [f for f in os.listdir(loop_dir) if f.endswith('.wav')]
-            print(f"[DEBUG] Archivos .wav encontrados: {wav_files}")  # ← NUEVO: lista
-            if wav_files:
-                # Ordena por fecha de mod (más reciente primero)
-                wav_files.sort(key=lambda f: os.path.getmtime(os.path.join(loop_dir, f)), reverse=True)
-                ultimo_path = os.path.join(loop_dir, wav_files[0])
-                self.ultimo_clip = AudioClip.cargar(ultimo_path)
-                if self.on_state_change:
-                    self.on_state_change(f"Cargado último: {self.ultimo_clip.nombre}")
-                return
+        if not os.path.exists(paths.LOOPS_DIR):
+            return
+        wavs = [f for f in os.listdir(paths.LOOPS_DIR) if f.endswith('.wav')]
+        if not wavs:
+            return
+        wavs.sort(key=lambda f: os.path.getmtime(os.path.join(paths.LOOPS_DIR, f)), reverse=True)
+        ultimo = os.path.join(paths.LOOPS_DIR, wavs[0])
+        self.ultimo_clip = AudioClip.cargar(ultimo)
         if self.on_state_change:
-            self.on_state_change("No hay archivos previos para reproducir")
+            self.on_state_change(f"Cargado: {self.ultimo_clip.nombre}")
+
+    def set_clip(self, clip):
+        self.ultimo_clip = clip
 
     def start_loop(self):
-        """Inicia reproducción en bucle (carga si no hay clip)."""
-        # ← NUEVO: Si no hay clip, carga el último
-        if not self.ultimo_clip or not self.ultimo_clip.datos.size:
-            self._cargar_ultimo_archivo()
-            if not self.ultimo_clip:
-                if self.on_state_change:
-                    self.on_state_change("No hay clip para reproducir. Graba primero.")
-                return
+        if not self.ultimo_clip:
+            if self.on_state_change:
+                self.on_state_change("No hay clip")
+            return
+
+        if self.reproduciendo:
+            return
 
         self.reproduciendo = True
-        self.stop_event.clear()
+        self.stop_event = threading.Event()
         if self.on_state_change:
             self.on_state_change("Reproduciendo")
-        self.playback_thread = Thread(target=self._reproducir_en_bucle)
-        self.playback_thread.daemon = True
+
+        self.playback_thread = Thread(target=self._reproducir_bucle, daemon=True)
         self.playback_thread.start()
 
-    def _reproducir_en_bucle(self):
-        """Hilo para bucle infinito (con wait interruptible)."""
+    def _reproducir_bucle(self):
         data = self.ultimo_clip.datos.astype(np.float32)
         fs = self.ultimo_clip.SAMPLE_RATE
-        duracion = len(data) / fs  # Duración en segundos (para timeout)
 
         while self.reproduciendo and not self.stop_event.is_set():
-            sd.play(data, fs)  # Inicia play asíncrono
-        
-            # ← FIX: Wait interruptible —bloquea hasta fin O hasta stop_event.set()
-            self.stop_event.wait(timeout=duracion) #i thing it doesn't have to have a time out, si we say play while stop event is not pressed... it's enough. and we run it in a separate thread.
-        
-            sd.stop()  # Para si se interrumpió mid-play
-        
-            # Si el event se setó, sale del while grande
-            if self.stop_event.is_set():
-                break
+            sd.play(data, samplerate=fs)
+            # Espera hasta que termine o se pulse stop
+            while not self.stop_event.is_set():
+                if sd.wait() != 0:  # Terminó de reproducir
+                    break
+            sd.stop()
 
-        sd.stop()  # Limpieza final
         self.reproduciendo = False
         if self.on_state_change:
             self.on_state_change("Reproducción detenida")
 
     def stop(self):
-        """Detiene reproducción."""
+        if not self.reproduciendo:
+            return
         self.reproduciendo = False
-        self.stop_event.set()
-        if self.playback_thread:
-            self.playback_thread.join(timeout=1)
-
-    def set_clip(self, clip):
-        """Asigna nuevo clip (sobrescribe el último)."""
-        self.ultimo_clip = clip
+        if self.stop_event:
+            self.stop_event.set()
+        sd.stop()

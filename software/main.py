@@ -1,58 +1,51 @@
 #!/usr/bin/env python3
-
-#ejecuta desde looper: python3 -m software.main asi lo trata como un paquete
-
-#from libs import paths
-
 import signal
 import time
-import os
-from threading import Event, Thread
+from threading import Event
 from .grabacion import LooperGrabacion
 from .reproduccion import LooperReproduccion
 from .buttons_manager import ButtonsManager
-from .oled_display import OledDisplay  # ← Cambio: nuevo import
-from .audio_clip import AudioClip
-print("debugger1")
-
+from .oled_display import OledDisplay
 
 class MainLooper:
     def __init__(self):
         self.exit_event = Event()
+
+        # ← ORDEN IMPORTANTE: display primero!
+        self.display = OledDisplay()                                   # ← AQUÍ PRIMERO
         self.grabacion = LooperGrabacion(on_state_change=self._update_ui)
-        self.reproduccion = LooperReproduccion(on_state_change=self._update_ui)
-        self.display = OledDisplay()  # ← Inicializa OLED (ajusta params si necesitas)
+        self.reproduccion = LooperReproduccion(on_state_change=self._update_ui)  # ← ahora ya existe display
         self.buttons = ButtonsManager(
-            self._on_grabar_press,
-            self._on_mute_press,
-            self._on_play_press,
-            self._on_stop_press,
-            self._on_long_stop
+            on_grabar_press=self._on_grabar_press,
+            on_mute_press=self._on_mute_press,
+            on_play_press=self._on_play_press,
+            on_stop_press=self._on_stop_press,
+            on_long_stop=self._on_long_stop
         )
+
         self.ultimo_clip = None
-        #self.monitor_thread = None
 
-        # Signals
-        signal.signal(signal.SIGINT, self._handler_senal)
-        signal.signal(signal.SIGTERM, self._handler_senal)
+        # Señales del sistema
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
 
-    def _update_ui(self, mensaje):
-        """Callback unificado: parsea mensaje y actualiza OLED."""
-        print(mensaje)  # Para consola
-        # Actualiza OLED con estados actuales (simple parseo; mejora si quieres)
-        if "Mute" in mensaje:
-            self.display.mostrar_estado(
-                self.grabacion.grabando, self.reproduccion.reproduciendo,
-                self.grabacion.mute, self.ultimo_clip
-            )
-        elif "Grabando" in mensaje or "Reproduciendo" in mensaje or "detenida" in mensaje:
-            self.display.mostrar_estado(
-                self.grabacion.grabando, self.reproduccion.reproduciendo,
-                self.grabacion.mute, self.ultimo_clip
-            )
+        # Stream siempre escuchando
+        self.grabacion.start_listening()
 
+    def _update_ui(self, mensaje=""):
+        print(f"[UI] {mensaje}")
+        # Protección: si aún no existen los objetos, solo imprime y no toca el display
+        if not hasattr(self, 'display') or not hasattr(self, 'grabacion') or not hasattr(self, 'reproduccion'):
+            return
+
+        self.display.mostrar_estado(
+            grabando=self.grabacion.grabando,
+            reproduciendo=self.reproduccion.reproduciendo,
+            mute=self.grabacion.mute,
+            ultimo_clip=self.ultimo_clip
+        )
+        
     def _on_grabar_press(self):
-        """Callback botón grabar."""
         if self.reproduccion.reproduciendo:
             self.reproduccion.stop()
         if not self.grabacion.grabando:
@@ -66,78 +59,46 @@ class MainLooper:
         self.grabacion.toggle_mute()
 
     def _on_play_press(self):
-        """Callback botón play."""
         if self.grabacion.grabando:
             self.ultimo_clip = self.grabacion.stop()
             if self.ultimo_clip:
                 self.reproduccion.set_clip(self.ultimo_clip)
-                self.reproduccion.start_loop()
-        elif self.ultimo_clip:
+        if self.ultimo_clip:
             if self.reproduccion.reproduciendo:
                 self.reproduccion.stop()
             else:
                 self.reproduccion.start_loop()
 
     def _on_stop_press(self):
-        """Callback botón stop (short: stop, long: exit)."""
         if self.reproduccion.reproduciendo:
             self.reproduccion.stop()
         if self.grabacion.grabando:
             self.ultimo_clip = self.grabacion.stop()
-        # Para long press: usa un timer en un hilo si quieres, pero por ahora short
 
     def _on_long_stop(self):
-        """Callback para long press en stop (exit)."""
-        self.exit_event.set()  # O lo que necesites
-        
-
-    def _handler_senal(self, signum, frame):
+        print("Long press detectado → Saliendo...")
         self.exit_event.set()
 
-    def _monitorear_salida(self):
-        """Hilo para chequeo de long press en stop (3s)."""
-        while not self.exit_event.is_set():
-            if self.buttons.btn_stop.is_pressed:
-                inicio = time.time()
-                while self.buttons.btn_stop.is_pressed and (time.time() - inicio < 3):
-                    time.sleep(0.1)
-                if time.time() - inicio >= 3:
-                    self.exit_event.set()
-            time.sleep(0.1)
+    def _signal_handler(self, signum, frame):
+        print("\nSeñal recibida → Saliendo limpiamente")
+        self.exit_event.set()
 
     def run(self):
-        """Loop principal."""
-        self.display.mostrar_estado(  # Inicial
-            self.grabacion.grabando, self.reproduccion.reproduciendo,
-            self.grabacion.mute, self.ultimo_clip
-        )
-        self.monitor_thread = Thread(target=self._monitorear_salida, daemon=False)
-        #self.monitor_thread.start()
-
+        self._update_ui("Ready")
         try:
-            # Inicia el stream de grabacion siempre listening)
-            with self.grabacion.stream:  # Asume que en LooperGrabacion agregas self.stream en init/start
-                while not self.exit_event.is_set():
-                    time.sleep(0.1)
-                    # Actualiza display cada 0.5s o en callbacks
-                    if time.time() % 0.5 < 0.1:  # Opcional: refresh periodico
-                        self.display.mostrar_estado(
-                            self.grabacion.grabando, self.reproduccion.reproduciendo,
-                            self.grabacion.mute, self.ultimo_clip
-                        )
-        except Exception as e:
-            print(f"Error: {e}")
+            while not self.exit_event.is_set():
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            pass
         finally:
             self.cleanup()
-        
+
     def cleanup(self):
-        print("Limpiando...")
-        self.display.clear()  # ← Limpia OLED al final
-        self.grabacion.stop()
+        print("Limpiando recursos...")
         self.reproduccion.stop()
-        if self.grabacion.buffer:  # Si buffer pendiente
-            self.ultimo_clip = self.grabacion.stop()
-        print("Programa terminado")
+        self.grabacion.stop_listening()
+        self.display.clear()
+        print("¡Adiós!")
 
 if __name__ == "__main__":
     looper = MainLooper()
