@@ -69,16 +69,8 @@ class MainLooper:
 
     def _on_play_press(self):
         
-        print("→ BOTÓN PLAY pulsado")
-        if self.grabacion.grabando:
-            self.ultimo_clip = self.grabacion.stop()
-            if self.ultimo_clip:
-                self.reproduccion.set_clip(self.ultimo_clip)
-        if self.ultimo_clip:
-            if self.reproduccion.reproduciendo:
-                self.reproduccion.stop()
-            else:
-                self.reproduccion.start_loop()
+        print("→ BOToN PLAY pulsado")
+        self.reproduccion.start_loop()
 
     def _on_stop_press(self):
         print("→ BOTÓN STOP corto")
