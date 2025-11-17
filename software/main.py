@@ -11,10 +11,18 @@ class MainLooper:
     def __init__(self):
         self.exit_event = Event()
 
-        # ← ORDEN IMPORTANTE: display primero!
-        self.display = OledDisplay()                                   # ← AQUÍ PRIMERO
-        self.grabacion = LooperGrabacion(on_state_change=self._update_ui)
-        self.reproduccion = LooperReproduccion(on_state_change=self._update_ui)  # ← ahora ya existe display
+        self.display = OledDisplay()
+        self.grabacion = LooperGrabacion()
+        self.reproduccion = LooperReproduccion()
+
+        # ← CALLBACKS PRIMERO
+        self.grabacion.on_state_change = self._update_ui
+        self.reproduccion.on_state_change = self._update_ui
+
+        # ← ¡¡CREAMOS LOS BOTONES AL FINAL Y CON RETRASO!!
+        import time
+        time.sleep(1.2)   # 1,2 segundos de margen (más que suficiente)
+
         self.buttons = ButtonsManager(
             on_grabar_press=self._on_grabar_press,
             on_mute_press=self._on_mute_press,
@@ -25,13 +33,12 @@ class MainLooper:
 
         self.ultimo_clip = None
 
-        # Señales del sistema
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
-        # Stream siempre escuchando
         self.grabacion.start_listening()
-
+        
+        
     def _update_ui(self, mensaje=""):
         print(f"[UI] {mensaje}")
         # Protección: si aún no existen los objetos, solo imprime y no toca el display
