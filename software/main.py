@@ -111,8 +111,9 @@ class MainLooper:
         self.grabacion.stop_listening()
         self.display.clear()
         try:
-            from gpiozero import Device
-            Device.pin_factory.close()   # ← cierra el socket de pigpio limpiamente
+            #from gpiozero import Device
+            #Device.pin_factory.close()   # ← cierra el socket de pigpio limpiamente
+            self.buttons.close()
         except:
             pass
         print("¡Adiós!")

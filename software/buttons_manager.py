@@ -1,18 +1,19 @@
 from gpiozero import Button
 from gpiozero import Device
-from gpiozero.pins.native import NativeFactory
-#import os
-#os.environ["GPIOZERO_PIN_FACTORY"] = "pigpio"
+from gpiozero.pins.lgpio import LGPIOFactory  # ← CORREGIDO: LGPIOFactory
 
-Device.pin_factory = NativeFactory()
+# Backend oficial de Bookworm: lgpio → nunca falla
+Device.pin_factory = LGPIOFactory()
+
+
 
 class ButtonsManager:
     def __init__(self, on_grabar_press, on_mute_press, on_play_press, on_stop_press, on_long_stop):
         # pull_up + bounce_time = botones perfectos y sin rebotes
-        self.btn_grabar = Button(26, pull_up=True, bounce_time=0.03)
-        self.btn_mute   = Button(6,  pull_up=True, bounce_time=0.03)
-        self.btn_play   = Button(13, pull_up=True, bounce_time=0.03)
-        self.btn_stop   = Button(19, pull_up=True, bounce_time=0.03, hold_time=3.0)
+        self.btn_grabar = Button(19, pull_up=True, bounce_time=0.03)
+        self.btn_mute   = Button(13,  pull_up=True, bounce_time=0.03)
+        self.btn_play   = Button(6, pull_up=True, bounce_time=0.03)
+        self.btn_stop   = Button(26, pull_up=True, bounce_time=0.03, hold_time=3.0)
 
         self.on_grabar_press = on_grabar_press
         self.on_mute_press   = on_mute_press

@@ -1,30 +1,23 @@
 #!/usr/bin/env python3
-from gpiozero import Button
 import os
 import time
 
-# Forzamos pigpio (el mismo que usas en tu looper)
-os.environ["GPIOZERO_PIN_FACTORY"] = "pigpio"
-# FORZAR pigpio de manera más agresiva
-os.environ["GPIOZERO_PIN_FACTORY"] = "pigpio"
-os.environ["PIGPIO_ADDR"] = "localhost"
-os.environ["PIGPIO_PORT"] = "8888"
+from gpiozero import Button
+from gpiozero import Device
+from gpiozero.pins.lgpio import LGPIOFactory  # ← CORREGIDO: LGPIOFactory
 
-print("=== GPIOZERO CON VARIABLES DE ENTORNO ===")
-print("GPIOZERO_PIN_FACTORY:", os.environ.get("GPIOZERO_PIN_FACTORY"))
-
-
-
+# Backend oficial de Bookworm: lgpio → nunca falla
+Device.pin_factory = LGPIOFactory()
 
 print("Test de botones con pigpio")
 print("Asegúrate de tener corriendo: sudo pigpiod")
 print("Pulsa Ctrl+C para salir\n")
 
 # ==== BOTONES ====
-btn_grabar = Button(26)   # Rojo
+btn_grabar = Button(19)   # Rojo
 btn_mute   = Button(6)    # Amarillo
 btn_play   = Button(13)   # Verde
-btn_stop   = Button(19, hold_time=3)  # Azul (o el que sea)
+btn_stop   = Button(26, hold_time=3)  # Azul (o el que sea)
 
 # ==== CALLBACKS ====
 def grabar_pressed():
