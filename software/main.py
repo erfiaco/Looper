@@ -53,6 +53,7 @@ class MainLooper:
         )
         
     def _on_grabar_press(self):
+        print("→ BOTÓN GRABAR pulsado")
         if self.reproduccion.reproduciendo:
             self.reproduccion.stop()
         if not self.grabacion.grabando:
@@ -63,9 +64,12 @@ class MainLooper:
                 self.reproduccion.set_clip(self.ultimo_clip)
 
     def _on_mute_press(self):
+        print("→ BOTÓN MUTE pulsado")
         self.grabacion.toggle_mute()
 
     def _on_play_press(self):
+        
+        print("→ BOTÓN PLAY pulsado")
         if self.grabacion.grabando:
             self.ultimo_clip = self.grabacion.stop()
             if self.ultimo_clip:
@@ -77,6 +81,7 @@ class MainLooper:
                 self.reproduccion.start_loop()
 
     def _on_stop_press(self):
+        print("→ BOTÓN STOP corto")
         if self.reproduccion.reproduciendo:
             self.reproduccion.stop()
         if self.grabacion.grabando:
@@ -105,6 +110,11 @@ class MainLooper:
         self.reproduccion.stop()
         self.grabacion.stop_listening()
         self.display.clear()
+        try:
+            from gpiozero import Device
+            Device.pin_factory.close()   # ← cierra el socket de pigpio limpiamente
+        except:
+            pass
         print("¡Adiós!")
 
 if __name__ == "__main__":

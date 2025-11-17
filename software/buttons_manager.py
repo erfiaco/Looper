@@ -1,6 +1,10 @@
 from gpiozero import Button
-import os
-os.environ["GPIOZERO_PIN_FACTORY"] = "pigpio"
+from gpiozero import Device
+from gpiozero.pins.native import NativeFactory
+#import os
+#os.environ["GPIOZERO_PIN_FACTORY"] = "pigpio"
+
+Device.pin_factory = NativeFactory()
 
 class ButtonsManager:
     def __init__(self, on_grabar_press, on_mute_press, on_play_press, on_stop_press, on_long_stop):
