@@ -14,10 +14,10 @@ print("Asegúrate de tener corriendo: sudo pigpiod")
 print("Pulsa Ctrl+C para salir\n")
 
 # ==== BOTONES ====
-btn_grabar = Button(19)   # Rojo
-btn_mute   = Button(6)    # Amarillo
-btn_play   = Button(13)   # Verde
-btn_stop   = Button(26, hold_time=3)  # Azul (o el que sea)
+btn_grabar = Button(5)   # Rojo
+btn_mute   = Button(26)    # Amarillo
+btn_play   = Button(6)   # Verde
+btn_stop   = Button(13, hold_time=3)  # Azul (o el que sea)
 
 # ==== CALLBACKS ====
 def grabar_pressed():
