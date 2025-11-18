@@ -1,7 +1,7 @@
 import sounddevice as sd
 import soundfile as sf
 import numpy as np
-from threading import Thread
+import threading# import Thread
 from software.audio_clip import AudioClip
 from libs import paths
 import os
@@ -14,6 +14,10 @@ class LooperReproduccion:
         self.playback_thread = None
         self.on_state_change = on_state_change
         self.ultimo_archivo = self.cargar_ultimo_archivo()  # ← CORREGIDO: self. y asignar a atributo
+
+        self.stop_event = threading.Event()
+        self.reproduciendo = False
+        self.thread = None
 
     def cargar_ultimo_archivo(self, carpeta="loops"):  # ← CORREGIDO: falta self
         """Carga el archivo con nombre más reciente"""
@@ -39,35 +43,70 @@ class LooperReproduccion:
             return
             
         self.reproduciendo = True
-        
+        self.stop_event.clear()  # Aseguramos que el event esté "limpio"
+
+        if self.on_state_change:
+            self.on_state_change("Reproduciendo loop")
+
+        print("Reproduciendo en bucle ∞ → Pulsa STOP para detener")
+
+        # Lanzamos la reproducción en un hilo separado
+        self.thread = threading.Thread(target=self._loop_worker, daemon=True)
+        self.thread.start()
+#        
+#        try:
+#            # Cargar archivo de audio - CORREGIDO: usar self.ultimo_archivo
+#            data, samplerate = sf.read(self.ultimo_archivo)
+#            
+#            # Reproducir
+#            sd.play(data, samplerate, blocking=False, loop=True)
+#            
+#            if self.on_state_change:
+#                self.on_state_change("Reproduciendo loop")
+#            print("Reproduciendo en bucle. Presiona 'r' + Enter para detener...")
+#    
+#            # Esperar a que se presione 'r'
+#            while self.reproduciendo:
+#                key = input()  
+#                if key.lower() == 'r':
+#                    self.stop_loop()
+#                    break
+#            
+#        except KeyboardInterrupt:
+#            self.stop_loop()
+#            print("\nReproducción interrumpida por el usuario")
+#        except Exception as e:
+#            print(f"Error: {e}")
+#            self.reproduciendo = False
+#        finally:
+#            if self.on_state_change:
+#                self.on_state_change("Reproducción detenida")    
+#                                        
+
+    def _loop_worker(self):
+        """Este es el código que corre en segundo plano"""
         try:
-            # Cargar archivo de audio - CORREGIDO: usar self.ultimo_archivo
             data, samplerate = sf.read(self.ultimo_archivo)
-            
-            # Reproducir
-            sd.play(data, samplerate, blocking=False, loop=True)
-            
-            if self.on_state_change:
-                self.on_state_change("Reproduciendo loop")
-            print("Reproduciendo en bucle. Presiona 'r' + Enter para detener...")
-    
-            # Esperar a que se presione 'r'
-            while self.reproduciendo:
-                key = input()  
-                if key.lower() == 'r':
-                    self.stop_loop()
+
+            while not self.stop_event.is_set():
+                # sd.play es no bloqueante con blocking=False
+                sd.play(data, samplerate, loop=True)  # loop=True tiene bugs en algunas versiones
+                
+                # Esperamos a que termine la reproducción actual (o a que nos digan stop)
+                while sd.get_stream().active and not self.stop_event.is_set():
+                    sd.sleep(100)  # dormimos 100 ms para no saturar CPU
+
+                # Si nos pidieron parar durante la reproducción, salimos
+                if self.stop_event.is_set():
+                    sd.stop()  # Forzamos parada inmediata
                     break
-            
-        except KeyboardInterrupt:
-            self.stop_loop()
-            print("\nReproducción interrumpida por el usuario")
+
         except Exception as e:
-            print(f"Error: {e}")
-            self.reproduciendo = False
+            print(f"Error en reproducción: {e}")
         finally:
-            if self.on_state_change:
-                self.on_state_change("Reproducción detenida")    
-                                        
+            sd.stop()
+            self.reproduciendo = False
+
     def stop(self):
         if not self.reproduciendo:
             return
