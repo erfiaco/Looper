@@ -13,11 +13,19 @@ class LooperReproduccion:
         self.stop_event = None
         self.playback_thread = None
         self.on_state_change = on_state_change
-        self.ultimo_archivo = self.cargar_ultimo_archivo()  # ← CORREGIDO: self. y asignar a atributo
+        #self.ultimo_archivo = self.cargar_ultimo_archivo()  # ← CORREGIDO: self. y asignar a atributo
 
         self.stop_event = threading.Event()
         self.reproduciendo = False
         self.thread = None
+
+
+    def cargar_ultimo(self):
+        archivos = paths.LOOPS_DIR
+        if not archivos:
+            raise FileNotFoundError("No hay loops")
+        print(f"cargar ultiomo: {max(archivos, key=os.path.getctime)}")    
+        return max(archivos, key=os.path.getctime)
 
     def cargar_ultimo_archivo(self, carpeta="loops"):  # ← CORREGIDO: falta self
         """Carga el archivo con nombre más reciente"""
@@ -86,8 +94,10 @@ class LooperReproduccion:
     def _loop_worker(self):
         """Este es el código que corre en segundo plano"""
         try:
-            data, samplerate = sf.read(self.ultimo_archivo)
-
+            #data, samplerate = sf.read(self.cargar_ultimo())
+            archivo=self.cargar_ultimo()            
+            data, samplerate = sf.read(archivo)
+            print(f"ultimo archivo es {archivo}") 
             while not self.stop_event.is_set():
                 # sd.play es no bloqueante con blocking=False
                 sd.play(data, samplerate, loop=True)  # loop=True tiene bugs en algunas versiones
