@@ -1,0 +1,9 @@
+2155  sudo systemctl start pigpiod
+ 2156  sudo pigpiod
+ 2159  sudo pigpiod
+ 2160  sudo rm /var/run/pigpio.pid
+ 2161  sudo killall pigpiod  # Si hay procesos zombies
+ 2162  sudo systemctl stop pigpiod
+ 2163  sudo systemctl start pigpiod
+ 2164  sudo systemctl enable pigpiod  # Para que arranque siempre al boot
+ 2169  sudo systemctl status pigpiod

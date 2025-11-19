@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+import os
+import signal
+import argparse
+import time
+from threading import Event, Thread
+from gpiozero import Button
+
+# force gpiozero to use RPi.GPIO
+os.environ["GPIOZERO_PIN_FACTORY"] = "rpigpio"
+
+# oled
+import ../libs/oled_classe as oled
+
+# backend selector (for now only sd; later you can add alsa)
+def load_backend(name: str):
+    if name == "sd":
+        from backends import sd_io as io
+        return io
+    raise ValueError(f"Unknown backend: {name}")
+
+# pins
+PIN_REC  = 26   # start/stop record
+PIN_MUTE = 6    # toggle mute
+PIN_PLAY = 13   # play/stop loop
+PIN_STOP = 19   # short: stop all, long(3s): exit
+
+def clear_screen():
+    os.system("cls" if os.name == "nt" else "clear")
+
+def show_state(io):
+    clear_screen()
+    state = io.get_state()
+    print("=== LOOPER RPI ===")
+    print(f"Mute: {'ON' if state['mute'] else 'OFF'}")
+    if state["recording"]:
+        est = "REC"
+    elif state["playing"]:
+        est = "PLAY"
+    else:
+        est = "WAITING"
+    print(f"Estado: {est}")
+    if state["last_file"]:
+        print(f"Ultimo loop: {os.path.basename(state['last_file'])}")
+    print("Mantener STOP 3s para salir")
+
+    # oled lines (ascii-safe)
+    oled.draw_status(est, f"Mute: {'ON' if state['mute'] else 'OFF'}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Looper with backend selector")
+    parser.add_argument("--backend", choices=["sd"], default="sd")
+    parser.add_argument("--sr", type=int, default=44100)
+    parser.add_argument("--ch", type=int, default=1)
+    parser.add_argument("--blocksize", type=int, default=1024)
+    parser.add_argument("--device_out", type=str, default=None)  # e.g. "pulse" or "audioinjectorpi"
+    parser.add_argument("--device_in", type=str, default=None)
+    parser.add_argument("--loops_dir", type=str, default="loops")
+    args = parser.parse_args()
+
+    io = load_backend(args.backend)
+
+    exit_event = Event()
+
+    # signal handlers
+    def handle_signal(signum, frame):
+        print("\nSignal received, exiting cleanly...")
+        exit_event.set()
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    # init backend
+    io.init_backend(
+        samplerate=args.sr,
+        channels=args.ch,
+        blocksize=args.blocksize,
+        device_in=args.device_in,
+        device_out=args.device_out,
+        loops_dir=args.loops_dir,
+    )
+
+    # buttons
+    btn_rec  = Button(PIN_REC)
+    btn_mute = Button(PIN_MUTE)
+    btn_play = Button(PIN_PLAY)
+    btn_stop = Button(PIN_STOP)
+
+    # button actions
+    def on_rec():
+        # toggle record; if currently playing, stop playback first
+        if io.is_playing():
+            io.stop_playback()
+        if not io.is_recording():
+            io.start_recording()
+            print("\nRecording started")
+        else:
+            # do not save here; play button will save+start loop,
+            # or stop button will save and stop.
+            io.stop_recording()
+            print("\nRecording stopped")
+        show_state(io)
+
+    def on_mute():
+        io.toggle_mute()
+        oled.draw_status("Mute ON" if io.get_state()["mute"] else "Mute OFF","")
+        show_state(io)
+
+    def on_play():
+        # if recording, stop and save then start loop
+        if io.is_recording():
+            io.stop_recording()
+            path = io.save_recording()
+            if path:
+                print("\nRecord saved, starting loop...")
+                io.start_loop_playback()
+        else:
+            # toggle playback
+            if io.is_playing():
+                io.stop_playback()
+                print("\nPlayback stopped")
+            else:
+                ok = io.start_loop_playback()
+                if not ok:
+                    print("\nNo file to play")
+        show_state(io)
+
+    def on_stop():
+        # short press: stop playback and recording, save if buffer
+        # long press handling is in a monitor thread below
+        if io.is_playing():
+            io.stop_playback()
+            print("\nPlayback stopped by STOP")
+        if io.is_recording():
+            io.stop_recording()
+            saved = io.save_recording()
+            if saved:
+                print("\nRecording stopped and saved by STOP")
+        show_state(io)
+
+    btn_rec.when_pressed  = on_rec
+    btn_mute.when_pressed = on_mute
+    btn_play.when_pressed = on_play
+    btn_stop.when_pressed = on_stop
+
+    # long-press STOP (3s) to exit
+    def monitor_exit():
+        while not exit_event.is_set():
+            if btn_stop.is_pressed:
+                t0 = time.time()
+                while btn_stop.is_pressed and not exit_event.is_set():
+                    if time.time() - t0 >= 3.0:
+                        print("\nExit requested by long STOP...")
+                        exit_event.set()
+                        return
+                    time.sleep(0.05)
+            time.sleep(0.05)
+
+    Thread(target=monitor_exit, daemon=True).start()
+
+    # start audio input stream (callback lives in backend)
+    show_state(io)
+    try:
+        with io.input_stream():
+            while not exit_event.is_set():
+                time.sleep(0.1)
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        print("\nCleaning up...")
+        try:
+            io.stop_playback()
+        except Exception:
+            pass
+        try:
+            io.stop_recording()
+        except Exception:
+            pass
+        # if there is buffered audio, save it
+        if io.has_buffer():
+            io.save_recording()
+        print("Program finished cleanly")
+
+if __name__ == "__main__":
+    main()
