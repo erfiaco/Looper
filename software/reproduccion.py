@@ -5,6 +5,7 @@ import threading# import Thread
 from software.audio_clip import AudioClip
 from libs import paths
 import os
+import glob
 
 class LooperReproduccion:
     def __init__(self, on_state_change=None):
@@ -21,12 +22,14 @@ class LooperReproduccion:
 
 
     def cargar_ultimo(self):
-        archivos = paths.LOOPS_DIR
-        if not archivos:
-            raise FileNotFoundError("No hay loops")
-        print(f"cargar ultiomo: {max(archivos, key=os.path.getctime)}")    
-        return max(archivos, key=os.path.getctime)
-
+        # Opción 1: usando glob (más simple y legible)
+        patron = os.path.join(paths.LOOPS_DIR, "*.wav")
+        archivos_wav = glob.glob(patron)
+    
+        ultimo = max(archivos_wav, key=os.path.getmtime)  # recomiendo getmtime
+        print(f"cargar_ultimo: {ultimo}")
+        return ultimo
+        
     def cargar_ultimo_archivo(self, carpeta="loops"):  # ← CORREGIDO: falta self
         """Carga el archivo con nombre más reciente"""
         archivos = os.listdir(carpeta)
