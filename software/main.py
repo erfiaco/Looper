@@ -77,7 +77,7 @@ class MainLooper:
             self.reproduccion.start_loop()
         elif self.reproduccion.reproduciendo:
             # Si ya está reproduciendo → actuamos como botón STOP
-            self.reproduccion.stop_loop()
+            self.reproduccion.stop()
         else:
                 # Si no está reproduciendo → arrancamos
             self.reproduccion.start_loop()
