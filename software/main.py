@@ -73,7 +73,7 @@ class MainLooper:
 
         if self.grabacion.grabando:
             self.ultimo_clip = self.grabacion.stop()
-            time.sleep(0.01)
+            #time.sleep(0.01)
             self.reproduccion.start_loop()
         elif self.reproduccion.reproduciendo:
             # Si ya está reproduciendo → actuamos como botón STOP
