@@ -122,7 +122,19 @@ class MainLooper:
         except:
             pass
         print("¡Adiós!")
+        
+        # Cuando termina, relanza el boot_menu
+        import subprocess
+        subprocess.Popen(["/usr/bin/python3", "/home/Javo/Proyects/boot_menu/boot_menu.py"])
+
+        
+#        import os
+#        os._exit(99)
 
 if __name__ == "__main__":
     looper = MainLooper()
     looper.run()
+    
+#    import os
+#    os._exit(99)
+
