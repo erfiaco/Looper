@@ -48,6 +48,10 @@ class LooperReproduccion:
 
     def set_clip(self, clip):
         self.ultimo_clip = clip
+            # a continuacion Guarda el audio en memoria
+        if clip:
+            self.audio_en_memoria = clip.datos
+            self.samplerate = clip.SAMPLE_RATE
 
     def start_loop(self):
         if self.reproduciendo:
@@ -56,8 +60,8 @@ class LooperReproduccion:
         self.reproduciendo = True
         self.stop_event.clear()  # Aseguramos que el event esté "limpio"
 
-        if self.on_state_change:
-            self.on_state_change("Reproduciendo loop")
+#        if self.on_state_change:
+#            self.on_state_change("Reproduciendo loop")
 
         print("Reproduciendo en bucle ∞ → Pulsa STOP para detener")
 
@@ -95,16 +99,35 @@ class LooperReproduccion:
 #                                        
 
     def _loop_worker(self):
+        """Reproducción desde memoria O desde disco"""
         """Este es el código que corre en segundo plano"""
+        
+        import time
+        t_inicio_real = time.perf_counter()
         try:
-            #data, samplerate = sf.read(self.cargar_ultimo())
-            archivo=self.cargar_ultimo()            
-            data, samplerate = sf.read(archivo)
-            print(f"ultimo archivo es {archivo}") 
+            t0 = time.perf_counter()
+            
+            if hasattr(self, 'audio_en_memoria') and self.audio_en_memoria is not None:
+                data = self.audio_en_memoria
+                samplerate = self.samplerate
+                print(f"Reproduciendo desde MEMORIA")
+                            
+            else:
+            
+                #data, samplerate = sf.read(self.cargar_ultimo())
+                archivo=self.cargar_ultimo()            
+                data, samplerate = sf.read(archivo)
+                print(f"Reproduciendo desde DISCO: {archivo}")
+                
+            t1 = time.perf_counter()
+            print(f"  Preparar audio: {(t1-t0)*1000:.1f}ms")
+            
+                            
             while not self.stop_event.is_set():
                 # sd.play es no bloqueante con blocking=False
                 sd.play(data, samplerate, loop=True)  # loop=True tiene bugs en algunas versiones
-                
+                t_play = time.perf_counter()
+                print(f"  LATENCIA REAL hasta sd.play(): {(t_play - t_inicio_real)*1000:.1f}ms")
                 # Esperamos a que termine la reproducción actual (o a que nos digan stop)
                 while sd.get_stream().active and not self.stop_event.is_set():
                     sd.sleep(100)  # dormimos 100 ms para no saturar CPU

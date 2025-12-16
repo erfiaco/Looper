@@ -64,23 +64,41 @@ class MainLooper:
                 self.reproduccion.set_clip(self.ultimo_clip)
 
     def _on_mute_press(self):
-        print("→ BOTÓN MUTE pulsado")
+        print("→ BOToN MUTE pulsado")
         self.grabacion.toggle_mute()
 
     def _on_play_press(self):
-        
+        import time
         print("→ BOToN PLAY pulsado")
-
+        t0 = time.perf_counter()  # ← INICIO
+        
         if self.grabacion.grabando:
+            print(f"  [t] Deteniendo grabacion...")
             self.ultimo_clip = self.grabacion.stop()
+            t1 = time.perf_counter()
+            print(f"  [t] Grabacion detenida: {(t1-t0)*1000:.1f}ms")
+            
+            # ← Carga en memoria
+            if self.ultimo_clip:
+                self.reproduccion.set_clip(self.ultimo_clip)
+                print(f"  [t] Clip cargado en memoria")            
+            
             #time.sleep(0.01)
+            print(f"  [t] Iniciando reproduccion...")
             self.reproduccion.start_loop()
+            t2 = time.perf_counter()
+            print(f"  [t] Reproducción iniciada: {(t2-t1)*1000:.1f}ms")
+            print(f"  [t] LATENCIA TOTAL: {(t2-t0)*1000:.1f}ms")
+            
+            self._update_ui("Grabación detenida")
+            
         elif self.reproduccion.reproduciendo:
-            # Si ya está reproduciendo → actuamos como botón STOP
             self.reproduccion.stop()
+            
         else:
-                # Si no está reproduciendo → arrancamos
+            # Si no está reproduciendo ni grabando → arrancamos
             self.reproduccion.start_loop()
+            self._update_ui("Grabación detenida")
         
 
         
@@ -91,6 +109,9 @@ class MainLooper:
             self.reproduccion.stop()
         if self.grabacion.grabando:
             self.ultimo_clip = self.grabacion.stop()
+            # guarda aki:
+            if self.ultimo_clip:
+                self.ultimo_clip.guardar()
 
     def _on_long_stop(self):
         print("Long press detectado → Saliendo...")

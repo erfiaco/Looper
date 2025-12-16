@@ -67,20 +67,46 @@ class LooperGrabacion:
             self.on_state_change("Grabando")
 
     def stop(self):
+    	
         if not self.grabando:
             return None
+        
+        import time
+        t_total = time.perf_counter()
+    
+        print(f"ANTES de set(): len(buffer) = {len(self.buffer)}")
+     
         self.grabando = False
+        t1 = time.perf_counter()
         self.stop_event.set()
-
+        t2 = time.perf_counter()
+        print(f"stop_event.set → {(t2-t1)*1000:.1f} ms")
+    
         if self.buffer:
+            t1 = time.perf_counter()
             audio = np.concatenate(self.buffer)
+            t2 = time.perf_counter()
+            print(f"np.concatenate → {(t2-t1)*1000:.1f} ms")
+        
+            t3 = time.perf_counter()
             clip = AudioClip(audio)
-            clip.guardar()
+            t4 = time.perf_counter()
+            print(f"Crear AudioClip → {(t4-t3)*1000:.1f} ms")
+            #clip.guardar()
+        
             self.buffer = []
-            if self.on_state_change:
-                self.on_state_change("Grabación detenida")
+        
+#            # ← MIDE AQUÍ
+#            t_antes_callback = time.perf_counter()
+#            if self.on_state_change:
+#                 self.on_state_change("Grabación detenida")
+#            t_despues_callback = time.perf_counter()
+#            print(f"on_state_change (OLED) → {(t_despues_callback - t_antes_callback)*1000:.1f} ms")
+        
+            print(f"STOP TOTAL → {(time.perf_counter() - t_total)*1000:.1f} ms")
             return clip
         return None
+        
 
     def toggle_mute(self):
         self.mute = not self.mute
