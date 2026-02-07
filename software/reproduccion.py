@@ -111,13 +111,23 @@ class LooperReproduccion:
                 data = self.audio_en_memoria
                 samplerate = self.samplerate
                 print(f"Reproduciendo desde MEMORIA")
+                t1 = time.perf_counter()
+                print(f"  [Repro] Usar memoria: {(t1-t0)*1000:.1f}ms")
                             
             else:
-            
-                #data, samplerate = sf.read(self.cargar_ultimo())
-                archivo=self.cargar_ultimo()            
+                print(f"Reproduciendo desde DISCO")
+                t_disco_inicio = time.perf_counter()
+                archivo=self.cargar_ultimo()
+                t_disco_find = time.perf_counter()
+                print(f"  [Repro] Buscar archivo: {(t_disco_find - t_disco_inicio)*1000:.1f}ms")            
+                
                 data, samplerate = sf.read(archivo)
+                
+                t_disco_read = time.perf_counter()
+                print(f"  [Repro] Leer WAV: {(t_disco_read - t_disco_find)*1000:.1f}ms")
                 print(f"Reproduciendo desde DISCO: {archivo}")
+       
+                
                 
             t1 = time.perf_counter()
             print(f"  Preparar audio: {(t1-t0)*1000:.1f}ms")

@@ -29,8 +29,8 @@ class OledDisplay:
         d.rectangle((0, 0, self.W, self.H), fill=0)  # Limpia
 
         # Linea 1: Modo/Estado
-        modo = "Grabando" if grabando else "Reproduciendo" if reproduciendo else "En espera"
-        d.text((0, 0), f"Mode: {modo}", font=self.font_big, fill=255)
+        modo = "REC" if grabando else "Play" if reproduciendo else "Stop"
+        d.text((0, 0), f"M: {modo}", font=self.font_big, fill=255)
 
         # Linea 2: Mute
         mute_text = f"Mute: {'ON' if mute else 'OFF'}"

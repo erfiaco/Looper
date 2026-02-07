@@ -10,6 +10,8 @@ from .oled_display import OledDisplay
 class MainLooper:
     def __init__(self):
         self.exit_event = Event()
+        
+        self.necesita_guardarse = False  # ← Nueva flag
 
         self.display = OledDisplay()
         self.grabacion = LooperGrabacion()
@@ -51,17 +53,21 @@ class MainLooper:
             mute=self.grabacion.mute,
             ultimo_clip=self.ultimo_clip
         )
-        
+
     def _on_grabar_press(self):
         print("→ BOTÓN GRABAR pulsado")
         if self.reproduccion.reproduciendo:
             self.reproduccion.stop()
+            self._update_ui()  # ← Actualiza después de detener reproducción
+    
         if not self.grabacion.grabando:
             self.grabacion.start()
+            self._update_ui()  # ← Se ejecuta INMEDIATAMENTE
         else:
             self.ultimo_clip = self.grabacion.stop()
             if self.ultimo_clip:
                 self.reproduccion.set_clip(self.ultimo_clip)
+            self._update_ui()  # ← Se ejecuta INMEDIATAMENTE        
 
     def _on_mute_press(self):
         print("→ BOToN MUTE pulsado")
@@ -81,37 +87,44 @@ class MainLooper:
             # ← Carga en memoria
             if self.ultimo_clip:
                 self.reproduccion.set_clip(self.ultimo_clip)
+                self.necesita_guardarse = True  # ← Marca para guardar
                 print(f"  [t] Clip cargado en memoria")            
             
             #time.sleep(0.01)
             print(f"  [t] Iniciando reproduccion...")
             self.reproduccion.start_loop()
             t2 = time.perf_counter()
-            print(f"  [t] Reproducción iniciada: {(t2-t1)*1000:.1f}ms")
+            print(f"  [t] Reproduccion iniciada: {(t2-t1)*1000:.1f}ms")
             print(f"  [t] LATENCIA TOTAL: {(t2-t0)*1000:.1f}ms")
             
-            self._update_ui("Grabación detenida")
+            self._update_ui("Grabacion detenida")
             
         elif self.reproduccion.reproduciendo:
             self.reproduccion.stop()
+            self._update_ui("Reproduccion detenida")
             
         else:
             # Si no está reproduciendo ni grabando → arrancamos
             self.reproduccion.start_loop()
-            self._update_ui("Grabación detenida")
+            self._update_ui("Arrancamos lolo")
         
-
-        
-
     def _on_stop_press(self):
         print("→ BOTÓN STOP corto")
         if self.reproduccion.reproduciendo:
             self.reproduccion.stop()
+            if self.necesita_guardarse and self.ultimo_clip:
+                print("  Guardando loop a disco...")
+                self.ultimo_clip.guardar()
+                self.necesita_guardarse = False
+            self._update_ui()  # ← AÑADE AQUÍ
+    
         if self.grabacion.grabando:
             self.ultimo_clip = self.grabacion.stop()
-            # guarda aki:
             if self.ultimo_clip:
                 self.ultimo_clip.guardar()
+                self.necesita_guardarse = False # Reset flag
+            self._update_ui()
+        
 
     def _on_long_stop(self):
         print("Long press detectado → Saliendo...")
