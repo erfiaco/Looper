@@ -144,26 +144,46 @@ class MainLooper:
         finally:
             self.cleanup()
 
+
     def cleanup(self):
         print("Limpiando recursos...")
+    
+        # 1. Detener reproducción
         self.reproduccion.stop()
-        self.grabacion.stop_listening()
+    
+        # 2. Detener grabación Y CERRAR STREAM
+        if hasattr(self.grabacion, 'stream') and self.grabacion.stream:
+            try:
+                self.grabacion.stream.stop()
+                self.grabacion.stream.close()
+                print("  ✓ Stream de grabación cerrado")
+            except:
+                pass
+    
+        # 3. Forzar stop de sounddevice
+        import sounddevice as sd
+        sd.stop()
+        print("  ✓ sounddevice detenido")
+    
+        # 4. Esperar a que se libere el dispositivo
+        time.sleep(0.3)
+    
+        # 5. Limpiar display
         self.display.clear()
+    
+        # 6. Cerrar botones (pero NO hacer GPIO.cleanup completo)
         try:
-            #from gpiozero import Device
-            #Device.pin_factory.close()   # ← cierra el socket de pigpio limpiamente
             self.buttons.close()
         except:
             pass
+    
         print("¡Adiós!")
-        
-        # Cuando termina, relanza el boot_menu
+    
+        # 7. Relanzar boot_menu
+#        subprocess.Popen(["/usr/bin/python3", "/home/Javo/Proyects/boot_menu/boot_menu.py"])
+#                # Volver al boot menu
         import subprocess
         subprocess.Popen(["/usr/bin/python3", "/home/Javo/Proyects/boot_menu/boot_menu.py"])
-
-        
-#        import os
-#        os._exit(99)
 
 if __name__ == "__main__":
     looper = MainLooper()
