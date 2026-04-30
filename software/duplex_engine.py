@@ -128,8 +128,15 @@ class DuplexEngine:
             return None
 
         audio = np.concatenate(buf).astype(np.float32)
+
+        fade_len = min(FADE_SAMPLES, len(audio) // 2)
+        ramp = np.linspace(0.0, 1.0, fade_len, dtype=np.float32).reshape(-1, 1)
+        audio[:fade_len] *= ramp
+        audio[-fade_len:] *= ramp[::-1]
+
         clip = AudioClip(audio)
         self._last_clip = clip
+        self._loop_audio = audio  # allows start_playing() to play it later
 
         if self.on_state_change:
             self.on_state_change('Grabación detenida')
