@@ -3,7 +3,7 @@ import numpy as np
 from .audio_clip import AudioClip
 
 BLOCKSIZE = 256
-FADE_SAMPLES = 1024  # ~23ms at 44100Hz — enough to hide any transition click
+FADE_SAMPLES = 1024  # ~23ms at 44100Hz
 
 
 class DuplexEngine:
@@ -22,6 +22,8 @@ class DuplexEngine:
         self._loop_audio = None  # (N, channels) float32
         self._play_pos = 0
         self._last_clip = None
+        self._last_input = None      # rolling last chunk from callback
+        self._preceding_buffer = None  # snapshot of input right before recording starts
 
         self.stream = sd.Stream(
             samplerate=self.sample_rate,
@@ -35,6 +37,9 @@ class DuplexEngine:
         print("DuplexEngine: stream duplex iniciado")
 
     def _callback(self, indata, outdata, frames, time_info, status):
+        # Always track the last input chunk so start_recording() can snapshot it
+        self._last_input = indata.copy()
+
         state = self.state
 
         if state == self.RECORDING:
@@ -67,6 +72,9 @@ class DuplexEngine:
     def start_recording(self):
         if self.state == self.RECORDING:
             return
+        # Capture the audio chunk playing right now, before recording begins.
+        # This is blended into the loop end later to smooth the wrap boundary.
+        self._preceding_buffer = self._last_input
         self._buffer = []
         self._loop_audio = None
         self._play_pos = 0
@@ -75,11 +83,10 @@ class DuplexEngine:
             self.on_state_change('Grabando')
 
     def stop_recording_and_play(self):
-        """Stop recording, build the loop with crossfades, and start playing immediately."""
+        """Stop recording, build the loop, and start playing immediately."""
         if self.state != self.RECORDING:
             return None
 
-        # Flip to IDLE first so the callback stops appending while we build
         self.state = self.IDLE
 
         buf = self._buffer
@@ -92,16 +99,24 @@ class DuplexEngine:
 
         audio = np.concatenate(buf).astype(np.float32)
 
-        # Crossfade at loop boundaries to eliminate clicks on loop start and end
         fade_len = min(FADE_SAMPLES, len(audio) // 2)
-        ramp = np.linspace(0.0, 1.0, fade_len, dtype=np.float32).reshape(-1, 1)
-        audio[:fade_len] *= ramp          # fade in at start
-        audio[-fade_len:] *= ramp[::-1]   # fade out at end
+        ramp_down = np.linspace(1.0, 0.0, fade_len, dtype=np.float32).reshape(-1, 1)
+
+        # Fade out the end of the loop
+        audio[-fade_len:] *= ramp_down
+
+        # Blend the preceding buffer (audio right before record was pressed) into
+        # the loop end with a fade-in — same approach as raspi-looper.
+        # This crossfades end→start at the wrap boundary instead of jumping.
+        if self._preceding_buffer is not None:
+            prec = self._preceding_buffer.astype(np.float32)
+            blend_len = min(len(prec), fade_len)
+            ramp_up = np.linspace(0.0, 1.0, blend_len, dtype=np.float32).reshape(-1, 1)
+            audio[-blend_len:] += prec[-blend_len:] * ramp_up
 
         clip = AudioClip(audio)
         self._last_clip = clip
 
-        # Set loop data BEFORE flipping state so callback never sees PLAYING with None loop
         self._play_pos = 0
         self._loop_audio = audio
         self.state = self.PLAYING
