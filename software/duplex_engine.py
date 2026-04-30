@@ -92,11 +92,12 @@ class DuplexEngine:
 
         audio = np.concatenate(buf).astype(np.float32)
 
-        # Crossfade at loop boundaries to eliminate clicks on loop start and end
-        fade_len = min(FADE_SAMPLES, len(audio) // 2)
-        ramp = np.linspace(0.0, 1.0, fade_len, dtype=np.float32).reshape(-1, 1)
-        audio[:fade_len] *= ramp          # fade in at start
-        audio[-fade_len:] *= ramp[::-1]   # fade out at end
+        # Fade out at end (1024 samples, ~23ms) + micro fade in at start (128 samples, ~3ms, sub-perceptual)
+        # The micro fade in eliminates the amplitude jump at loop wrap without creating an audible tss
+        fade_out_len = min(FADE_SAMPLES, len(audio) // 2)
+        fade_in_len = min(128, len(audio) // 2)
+        audio[-fade_out_len:] *= np.linspace(1.0, 0.0, fade_out_len, dtype=np.float32).reshape(-1, 1)
+        audio[:fade_in_len]   *= np.linspace(0.0, 1.0, fade_in_len,  dtype=np.float32).reshape(-1, 1)
 
         clip = AudioClip(audio)
         self._last_clip = clip
