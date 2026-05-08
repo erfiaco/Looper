@@ -18,10 +18,10 @@ class MainLooper:
         time.sleep(1.2)
 
         self.buttons = ButtonsManager(
-            on_grabar_press=self._on_grabar_press,
-            on_mute_press=self._on_mute_press,
-            on_play_press=self._on_play_press,
-            on_stop_press=self._on_stop_press,
+            on_btn_1_press=self._on_grabar_press,
+            on_btn_2_press=self._on_mute_press,
+            on_btn_3_press=self._on_play_press,
+            on_btn_4_press=self._on_stop_press,
             on_long_stop=self._on_long_stop
         )
 

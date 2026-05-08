@@ -5,26 +5,26 @@ from gpiozero.pins.lgpio import LGPIOFactory
 Device.pin_factory = LGPIOFactory()
 
 class ButtonsManager:
-    def __init__(self, on_grabar_press, on_mute_press, on_play_press, on_stop_press, on_long_stop):
-        self.btn_grabar = Button(6, pull_up=True, bounce_time=0.03)
-        self.btn_mute   = Button(26, pull_up=True, bounce_time=0.03)
-        self.btn_play   = Button(13,  pull_up=True, bounce_time=0.03)
-        self.btn_stop   = Button(5, pull_up=True, bounce_time=0.03, hold_time=3.0)
+    def __init__(self, on_btn_1_press, on_btn_2_press, on_btn_3_press, on_btn_4_press, on_long_stop):
+        self.btn_1 = Button(6,  pull_up=True, bounce_time=0.03)
+        self.btn_2 = Button(26, pull_up=True, bounce_time=0.03)
+        self.btn_3 = Button(13, pull_up=True, bounce_time=0.03)
+        self.btn_4 = Button(5,  pull_up=True, bounce_time=0.03, hold_time=3.0)
 
         # Asignacion directa
 
-        self.btn_grabar.when_pressed = on_grabar_press
-        self.btn_mute.when_pressed   = on_mute_press
-        self.btn_play.when_pressed   = on_play_press
-        self.btn_stop.when_pressed   = on_stop_press
-        self.btn_stop.when_held      = on_long_stop
-        
+        self.btn_1.when_pressed = on_btn_1_press
+        self.btn_2.when_pressed = on_btn_2_press
+        self.btn_3.when_pressed = on_btn_3_press
+        self.btn_4.when_pressed = on_btn_4_press
+        self.btn_4.when_held    = on_long_stop
+
 
     def close(self):
         try:
-            self.btn_grabar.close()
-            self.btn_mute.close()
-            self.btn_play.close()
-            self.btn_stop.close()
+            self.btn_1.close()
+            self.btn_2.close()
+            self.btn_3.close()
+            self.btn_4.close()
         except Exception as e:
             print(f"  ⚠️ Error cerrando botones: {e}")
