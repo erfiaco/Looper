@@ -18,10 +18,11 @@ class MainLooper:
         time.sleep(1.2)
 
         self.buttons = ButtonsManager(
-            on_btn_1_press=self._on_grabar_press,
-            on_btn_2_press=self._on_mute_press,
-            on_btn_3_press=self._on_play_press,
-            on_btn_4_press=self._on_stop_press,
+            on_btn_1_press=self._on_btn_1_press,
+            on_btn_2_press=self._on_btn_2_press,
+            on_btn_2_hold=self._on_btn_2_hold,
+            on_btn_3_press=self._on_btn_3_press,
+            on_btn_4_press=self._on_btn_4_press,
             on_long_stop=self._on_long_stop
         )
 
@@ -39,37 +40,35 @@ class MainLooper:
             ultimo_clip=self.engine.last_clip
         )
 
-    def _on_grabar_press(self):
-        print("→ BOTÓN GRABAR pulsado")
+    def _on_btn_1_press(self):
         if self.engine.reproduciendo:
-            self.engine.stop_playing()
-
+            return  # future: overdub
         if not self.engine.grabando:
             self.engine.start_recording()
         else:
-            clip = self.engine.stop_recording()
-            if clip:
-                self.necesita_guardarse = True
-        self._update_ui()
-
-    def _on_mute_press(self):
-        print("→ BOTÓN MUTE pulsado")
-        self.engine.toggle_mute()
-
-    def _on_play_press(self):
-        print("→ BOTÓN PLAY pulsado")
-        if self.engine.grabando:
             clip = self.engine.stop_recording_and_play()
             if clip:
                 self.necesita_guardarse = True
+        self._update_ui()
+
+    def _on_btn_2_press(self):
+        if self.engine.grabando:
+            self.engine.stop_recording()
         elif self.engine.reproduciendo:
             self.engine.stop_playing()
-        else:
+        elif self.engine.has_loop:
             self.engine.start_playing()
         self._update_ui()
 
-    def _on_stop_press(self):
-        print("→ BOTÓN STOP corto")
+    def _on_btn_2_hold(self):
+        self.engine.clear_loop()
+        self.necesita_guardarse = False
+        self._update_ui()
+
+    def _on_btn_3_press(self):
+        self.engine.toggle_mute()
+
+    def _on_btn_4_press(self):
         if self.engine.reproduciendo:
             self.engine.stop_playing()
             if self.necesita_guardarse and self.engine.last_clip:

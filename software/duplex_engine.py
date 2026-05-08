@@ -74,12 +74,19 @@ class DuplexEngine:
         if self.on_state_change:
             self.on_state_change('Grabando')
 
+    def _build_loop(self, buf):
+        audio = np.concatenate(buf).astype(np.float32)
+        fade_len = min(FADE_SAMPLES, len(audio) // 2)
+        ramp = np.linspace(0.0, 1.0, fade_len, dtype=np.float32).reshape(-1, 1)
+        audio[:fade_len] *= ramp
+        audio[-fade_len:] *= ramp[::-1]
+        return audio
+
     def stop_recording_and_play(self):
         """Stop recording, build the loop with crossfades, and start playing immediately."""
         if self.state != self.RECORDING:
             return None
 
-        # Flip to IDLE first so the callback stops appending while we build
         self.state = self.IDLE
 
         buf = self._buffer
@@ -90,14 +97,7 @@ class DuplexEngine:
                 self.on_state_change('Sin audio')
             return None
 
-        audio = np.concatenate(buf).astype(np.float32)
-
-        # Crossfade at loop boundaries to eliminate clicks on loop start and end
-        fade_len = min(FADE_SAMPLES, len(audio) // 2)
-        ramp = np.linspace(0.0, 1.0, fade_len, dtype=np.float32).reshape(-1, 1)
-        audio[:fade_len] *= ramp          # fade in at start
-        audio[-fade_len:] *= ramp[::-1]   # fade out at end
-
+        audio = self._build_loop(buf)
         clip = AudioClip(audio)
         self._last_clip = clip
 
@@ -112,7 +112,7 @@ class DuplexEngine:
         return clip
 
     def stop_recording(self):
-        """Stop recording without starting playback (e.g. for STOP button)."""
+        """Stop recording without starting playback."""
         if self.state != self.RECORDING:
             return None
 
@@ -126,14 +126,26 @@ class DuplexEngine:
                 self.on_state_change('Sin audio')
             return None
 
-        audio = np.concatenate(buf).astype(np.float32)
+        audio = self._build_loop(buf)
         clip = AudioClip(audio)
         self._last_clip = clip
+        self._loop_audio = audio
+        self._play_pos = 0
 
         if self.on_state_change:
             self.on_state_change('Grabación detenida')
 
         return clip
+
+    def clear_loop(self):
+        """Clear all recorded audio from memory."""
+        self.state = self.IDLE
+        self._buffer = []
+        self._loop_audio = None
+        self._play_pos = 0
+        self._last_clip = None
+        if self.on_state_change:
+            self.on_state_change('Memoria borrada')
 
     def start_playing(self):
         """Resume playing the current loop (if one exists)."""
@@ -171,6 +183,10 @@ class DuplexEngine:
     @property
     def last_clip(self):
         return self._last_clip
+
+    @property
+    def has_loop(self):
+        return self._loop_audio is not None
 
     # ------------------------------------------------------------------
 
