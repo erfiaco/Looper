@@ -3,7 +3,7 @@ import numpy as np
 from .audio_clip import AudioClip
 
 BLOCKSIZE = 256
-FADE_SAMPLES = 1024  # ~23ms at 44100Hz — enough to hide any transition click
+FADE_SAMPLES = 1024*2  # ~23ms at 44100Hz — enough to hide any transition click
 
 
 class DuplexEngine:

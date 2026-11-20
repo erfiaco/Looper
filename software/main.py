@@ -54,6 +54,7 @@ class MainLooper:
     def _on_btn_2_press(self):
         if self.engine.grabando:
             self.engine.stop_recording()
+            self.necesita_guardarse = True
         elif self.engine.reproduciendo:
             self.engine.stop_playing()
         elif self.engine.has_loop:
@@ -75,12 +76,15 @@ class MainLooper:
                 print("  Guardando loop a disco...")
                 self.engine.last_clip.guardar()
                 self.necesita_guardarse = False
-
-        if self.engine.grabando:
+        elif self.engine.grabando:
             clip = self.engine.stop_recording()
             if clip:
                 clip.guardar()
                 self.necesita_guardarse = False
+        elif self.necesita_guardarse and self.engine.last_clip:
+            print("  Guardando loop a disco...")
+            self.engine.last_clip.guardar()
+            self.necesita_guardarse = False
         self._update_ui()
 
     def _on_long_stop(self):
